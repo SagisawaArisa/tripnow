@@ -1,0 +1,12 @@
+package com.trip.constants;
+
+import java.nio.charset.StandardCharsets;
+
+public class SystemConstants {
+    //todo upgrade
+    public static final byte[] JWT_SECRET = "trip-now-sign-key".getBytes(StandardCharsets.UTF_8);
+    public static final String IMAGE_UPLOAD_DIR = "imgs\\";
+    public static final String USER_NICK_NAME_PREFIX = "user_";
+    public static final int DEFAULT_PAGE_SIZE = 5;
+    public static final int MAX_PAGE_SIZE = 10;
+}

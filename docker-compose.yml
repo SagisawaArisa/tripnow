@@ -1,0 +1,86 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=trip
+    volumes:
+      - ./infra/mysql/data:/var/lib/mysql
+      - ./infra/mysql/conf:/etc/mysql/conf.d
+      - ./src/main/resources/db:/docker-entrypoint-initdb.d
+    command: 
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+    restart: always
+
+  redis:
+    image: redis:7.4.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./infra/redis/data:/data
+    command: redis-server --appendonly yes
+    restart: always
+  namesrv:
+    image: apache/rocketmq:4.9.4
+    container_name: rmqnamesrv
+    ports:
+      - 9876:9876
+    command: sh mqnamesrv
+  broker:
+    image: apache/rocketmq:4.9.4
+    container_name: rmqbroker
+    ports:
+      - 10909:10909
+      - 10911:10911
+    environment:
+      - NAMESRV_ADDR=namesrv:9876
+      - BROKER_IP1= 192.168.1.11 
+      - "JAVA_OPT_EXT=-Xms512M -Xmx512M -Xmn256M"
+    volumes:
+      - ./infra/broker.conf:/opt/rocketmq-4.9.4/conf/broker.conf
+    command: sh mqbroker -c /opt/rocketmq-4.9.4/conf/broker.conf
+    depends_on:
+      - namesrv
+  dashboard:
+    image: apacherocketmq/rocketmq-dashboard:latest
+    container_name: rmqdashboard
+    ports:
+      - 8000:8082
+    environment:
+      - NAMESRV_ADDR=namesrv:9876
+
+  elasticsearch:
+    image: elasticsearch:7.17.10
+    container_name: rmqes
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - ./infra/es-plugins:/usr/share/elasticsearch/plugins
+      - ./infra/es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+
+  canal-server:
+    image: canal/canal-server:v1.1.7
+    container_name: rmqcanal
+    ports:
+      - "11111:11111"
+    volumes:
+      - ./infra/instance.properties:/home/admin/canal-server/conf/example/instance.properties
+      - ./infra/canal.properties:/home/admin/canal-server/conf/canal.properties
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+    environment:
+      - canal.mq.partitionsNum=4
+      - canal.mq.partitionHash=trip.tb_scenic:id
+      - canal.mq.dynamicTopic=true
