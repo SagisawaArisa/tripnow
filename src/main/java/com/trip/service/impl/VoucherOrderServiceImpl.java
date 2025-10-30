@@ -14,11 +14,15 @@ import com.trip.entity.SeckillOrder;
 import com.github.yitter.idgen.YitIdHelper;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.rocketmq.client.producer.LocalTransactionState;
+import org.apache.rocketmq.client.producer.TransactionSendResult;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.redisson.api.RedissonClient;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
@@ -79,22 +83,22 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     public Result seckillVoucher(Long voucherId) {
         Long userId = UserHolder.getUser().getId();
         long orderId = YitIdHelper.nextId();
-        Long result = stringRedisTemplate.execute(
-                SECKILL_SCRIPT,
-                Collections.emptyList(),
-                voucherId.toString(), userId.toString()
-        );
-        
-        int r = result.intValue();
-        if (r != 0) {
-            return Result.fail(r == 1 ? "库存不足" : "不能重复下单");
-        }
+
         SeckillOrder seckillOrder = new SeckillOrder();
         seckillOrder.setId(orderId);
         seckillOrder.setUserId(userId);
         seckillOrder.setVoucherId(voucherId);
-        rocketMQTemplate.convertAndSend(MQTopics.SECKILL_TOPIC, seckillOrder);
-        return Result.ok(orderId);
+        TransactionSendResult sendResult = rocketMQTemplate.sendMessageInTransaction(
+                MQTopics.SECKILL_TOPIC,
+                MessageBuilder.withPayload(seckillOrder).build(),
+                null
+        );
+
+        if (sendResult.getLocalTransactionState() == LocalTransactionState.COMMIT_MESSAGE) {
+            return Result.ok(orderId);
+        } else {
+            return Result.fail("下单失败");
+        }
     }
 
 
