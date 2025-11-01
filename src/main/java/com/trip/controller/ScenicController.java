@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.trip.dto.Result;
 import com.trip.entity.Scenic;
+import com.trip.annotation.RateLimit;
 import com.trip.service.IScenicService;
 import com.trip.constants.SystemConstants;
 import org.springframework.web.bind.annotation.*;
@@ -90,6 +91,7 @@ public class ScenicController {
      * @return 景区列表
      */
     @GetMapping("/search")
+    @RateLimit(key = "scenic_search", count = 20, time = 60)
     public Result searchScenic(@RequestParam(value = "key", required = false) String key,
                                @RequestParam(value = "area", required = false) String area,
                                @RequestParam(value = "sortBy", required = false) String sortBy,

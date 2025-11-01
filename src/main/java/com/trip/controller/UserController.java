@@ -9,6 +9,7 @@ import com.trip.entity.User;
 import com.trip.entity.UserInfo;
 import com.trip.service.IUserInfoService;
 import com.trip.service.IUserService;
+import com.trip.annotation.RateLimit;
 import com.trip.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +30,7 @@ public class UserController {
     private IUserInfoService userInfoService;
 
     @PostMapping("code")
+    @RateLimit(key = "send_code", count = 1, time = 60)
     public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
         return userService.sendCode(phone, session);
     }

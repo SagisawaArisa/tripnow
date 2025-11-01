@@ -1,6 +1,7 @@
 package com.trip.controller;
 
 
+import com.trip.annotation.RateLimit;
 import com.trip.dto.Result;
 import com.trip.service.IVoucherOrderService;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +20,7 @@ public class VoucherOrderController {
     private IVoucherOrderService voucherOrderService;
 
     @PostMapping("seckill/{id}")
+    @RateLimit(key = "seckill", count = 2, time = 1)
     public Result seckillVoucher(@PathVariable("id") Long voucherId) {
         return voucherOrderService.seckillVoucher(voucherId);
     }
