@@ -59,7 +59,8 @@ public class RateLimitAspect {
                     limitScript,
                     Collections.singletonList(combineKey),
                     String.valueOf(count),
-                    String.valueOf(time)
+                    String.valueOf(time),
+                    String.valueOf(System.currentTimeMillis())
             );
 
             if (result != null && result == 1) {
