@@ -2,7 +2,6 @@ package com.trip.mq.producer;
 
 import com.alibaba.fastjson.JSON;
 import com.trip.entity.SeckillOrder;
-import com.trip.entity.VoucherOrder;
 
 import java.util.Collections;
 

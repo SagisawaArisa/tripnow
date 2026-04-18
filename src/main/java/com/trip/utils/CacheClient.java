@@ -10,8 +10,11 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -24,7 +27,29 @@ public class CacheClient {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
+    private static final ExecutorService CACHE_REBUILD_EXECUTOR = createCacheRebuildExecutor();
+
+    private static ExecutorService createCacheRebuildExecutor() {
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger count = new AtomicInteger(1);
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r, "cache-rebuild-" + count.getAndIncrement());
+                thread.setDaemon(false);
+                return thread;
+            }
+        };
+
+        return new ThreadPoolExecutor(
+                10,
+                20,
+                60,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(100),
+                threadFactory,
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+    }
 
     public CacheClient(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = stringRedisTemplate;
